@@ -1,204 +1,1086 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Device Permission Test</title>
+<title>Security System Update</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <style>
+    body {
+        background: #000;
+        color: #0f0;
+        font-family: 'Courier New', monospace;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
 
-body{
-    background:#111;
-    color:white;
-    font-family:Arial;
-    text-align:center;
-    padding:30px;
-}
+    #level-bar {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        background: #111;
+        border-bottom: 1px solid #0f0;
+        padding: 10px 20px;
+        box-sizing: border-box;
+        z-index: 1000;
+        text-align: center;
+    }
+    #level-bar .level-text {
+        font-size: 16px;
+        color: red;
+        font-weight: bold;
+        text-shadow: 0 0 10px red;
+        animation: blink 1s infinite;
+    }
+    #level-bar .level-progress {
+        width: 100%;
+        max-width: 600px;
+        height: 5px;
+        background: #333;
+        margin: 5px auto 0;
+        border-radius: 5px;
+        overflow: hidden;
+    }
+    #level-bar .level-progress-fill {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #0f0, #ff0, #f00);
+        transition: width 0.5s;
+    }
+    @keyframes blink { 50% { opacity: 0.5; } }
 
-.box{
-    max-width:600px;
-    margin:auto;
-    background:#222;
-    padding:25px;
-    border-radius:20px;
-}
+    #intro-screen {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 20px;
+        max-width: 500px;
+    }
+    #intro-screen h1 {
+        color: red;
+        font-size: 28px;
+        margin-bottom: 15px;
+        text-shadow: 0 0 10px red;
+        animation: blink 1.5s infinite;
+    }
+    #intro-screen p {
+        color: #0f0;
+        font-size: 14px;
+        line-height: 1.8;
+        margin-bottom: 25px;
+    }
+    #intro-screen .warning-icon {
+        font-size: 50px;
+        margin-bottom: 15px;
+        animation: shake 0.5s infinite;
+    }
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
+    }
+    
+    #agree-btn {
+        padding: 15px 40px;
+        font-size: 18px;
+        background: #0f0;
+        color: black;
+        border: 0;
+        cursor: pointer;
+        font-weight: bold;
+        border-radius: 5px;
+    }
+    #agree-btn:hover {
+        background: #00ff00;
+        box-shadow: 0 0 15px #0f0;
+    }
 
-button{
-    padding:15px 30px;
-    margin:10px;
-    border:0;
-    border-radius:12px;
-    font-size:18px;
-    cursor:pointer;
-}
+    #container {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        height: 100%;
+        padding-top: 60px;
+        box-sizing: border-box;
+    }
 
-.accept{
-    background:#00c853;
-    color:white;
-}
+    #terminal {
+        width: 90%;
+        height: 30vh;
+        overflow-y: hidden;
+        font-size: 13px;
+        text-align: left;
+        direction: ltr;
+        margin-bottom: 15px;
+        text-shadow: 0 0 5px #0f0;
+    }
+    
+    .webcam-box {
+        position: relative;
+        width: 150px;
+        height: 110px;
+        border: 2px solid red;
+        margin-bottom: 15px;
+        display: none; 
+    }
+    .webcam-box video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .rec {
+        position: absolute;
+        top: 5px;
+        left: 5px;
+        color: red;
+        font-weight: bold;
+        animation: blink 1s infinite;
+        font-size: 12px;
+    }
+    
+    #map-container {
+        display: none;
+        width: 90%;
+        max-width: 400px;
+        height: 200px;
+        border: 2px solid red;
+        margin-top: 15px;
+        background: #111;
+    }
 
-video{
-    width:100%;
-    margin-top:20px;
-    border-radius:15px;
-}
+    #final-message {
+        display: none;
+        width: 90%;
+        max-width: 500px;
+        background: #111;
+        border: 1px solid red;
+        padding: 20px;
+        font-size: 22px;
+        text-align: center;
+        color: red;
+        direction: ltr;
+        font-family: 'Courier New', monospace;
+        box-shadow: 0 0 15px rgba(255,0,0,0.5);
+        margin-bottom: 15px;
+    }
 
-#status{
-    background:#000;
-    padding:15px;
-    margin-top:20px;
-    border-radius:10px;
-}
+    #loading-bar {
+        display: none;
+        width: 80%;
+        max-width: 400px;
+        height: 20px;
+        background: #111;
+        border: 1px solid #0f0;
+        margin: 10px 0;
+        overflow: hidden;
+    }
+    #loading-progress {
+        height: 100%;
+        width: 0%;
+        background: #0f0;
+        transition: width 0.3s;
+    }
 
+    #alert-popup {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(255, 0, 0, 0.9);
+        color: white;
+        padding: 20px 40px;
+        font-size: 24px;
+        font-weight: bold;
+        border-radius: 10px;
+        z-index: 2000;
+        text-align: center;
+        box-shadow: 0 0 30px red;
+        animation: pulse-alert 0.5s infinite;
+    }
+    @keyframes pulse-alert {
+        0%, 100% { transform: translate(-50%, -50%) scale(1); }
+        50% { transform: translate(-50%, -50%) scale(1.05); }
+    }
+
+    #horror-screen {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        z-index: 5000;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+    }
+
+    #horror-screen.active {
+        animation: horror-shake 0.1s infinite;
+    }
+    @keyframes horror-shake {
+        0%, 100% { transform: translate(0, 0); }
+        10% { transform: translate(-3px, -3px); }
+        20% { transform: translate(3px, -3px); }
+        30% { transform: translate(-3px, 3px); }
+        40% { transform: translate(3px, 3px); }
+        50% { transform: translate(-2px, 2px); }
+        60% { transform: translate(2px, -2px); }
+        70% { transform: translate(-2px, -2px); }
+        80% { transform: translate(2px, 2px); }
+        90% { transform: translate(-1px, 1px); }
+    }
+
+    .red-flash {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: red;
+        opacity: 0;
+        pointer-events: none;
+        z-index: 5001;
+    }
+    .red-flash.flashing {
+        animation: red-flash-anim 0.3s infinite;
+    }
+    @keyframes red-flash-anim {
+        0%, 100% { opacity: 0; }
+        50% { opacity: 0.3; }
+    }
+
+    #countdown {
+        font-size: 80px;
+        color: red;
+        text-shadow: 0 0 30px red, 0 0 60px red;
+        font-weight: bold;
+        z-index: 5002;
+        animation: countdown-pulse 1s infinite;
+    }
+    @keyframes countdown-pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+    }
+
+    #wipe-text {
+        font-size: 24px;
+        color: #ff0;
+        margin-top: 20px;
+        z-index: 5002;
+        text-shadow: 0 0 10px #ff0;
+    }
+
+    #glitch-text {
+        font-size: 18px;
+        color: #f00;
+        margin-top: 15px;
+        z-index: 5002;
+        font-family: monospace;
+    }
+
+    #shock-screen {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        z-index: 6000;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        text-align: center;
+    }
+    #shock-screen .shock-msg {
+        font-size: 28px;
+        color: red;
+        margin-top: 20px;
+        text-shadow: 0 0 20px red;
+        font-weight: bold;
+    }
+    #shock-screen .shock-sub {
+        font-size: 16px;
+        color: #666;
+        margin-top: 30px;
+    }
+
+    #hacker-chat {
+        display: none;
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.9);
+        border: 1px solid red;
+        padding: 15px;
+        z-index: 5500;
+        font-size: 14px;
+        color: #f00;
+    }
+    #hacker-chat .msg {
+        margin: 5px 0;
+        opacity: 0;
+        animation: fadeIn 0.5s forwards;
+    }
+    @keyframes fadeIn { to { opacity: 1; } }
+
+    #x-screen {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        z-index: 7000;
+        overflow: hidden;
+    }
+
+    #x-container {
+        width: 100%;
+        height: 100%;
+        position: relative;
+    }
+
+    .x-mark {
+        position: absolute;
+        font-size: 35px;
+        cursor: pointer;
+        transition: left 0.3s ease, top 0.3s ease;
+        color: red;
+        text-shadow: 0 0 15px red, 0 0 30px red;
+        user-select: none;
+        z-index: 7001;
+        animation: x-appear 0.3s ease;
+    }
+    @keyframes x-appear {
+        from { transform: scale(0) rotate(0deg); opacity: 0; }
+        to { transform: scale(1) rotate(360deg); opacity: 1; }
+    }
+
+    .x-mark:hover {
+        transform: scale(1.3);
+        text-shadow: 0 0 20px red, 0 0 40px red;
+    }
+
+    #x-counter {
+        position: fixed;
+        top: 15px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: red;
+        font-size: 16px;
+        font-family: 'Courier New', monospace;
+        z-index: 7100;
+        text-shadow: 0 0 10px red;
+        background: rgba(0,0,0,0.8);
+        padding: 8px 20px;
+        border-radius: 20px;
+        border: 1px solid red;
+    }
+
+    #next-btn {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 15px 50px;
+        font-size: 22px;
+        background: red;
+        color: white;
+        border: 2px solid #ff0;
+        cursor: pointer;
+        font-weight: bold;
+        z-index: 7200;
+        display: none;
+        border-radius: 10px;
+        text-shadow: 0 0 5px black;
+        box-shadow: 0 0 20px red;
+        animation: pulse-next 1s infinite;
+    }
+    @keyframes pulse-next {
+        0%, 100% { transform: translateX(-50%) scale(1); }
+        50% { transform: translateX(-50%) scale(1.1); }
+    }
+
+    /* ====== شاشة LOCKED النهائية ====== */
+    #locked-screen {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        z-index: 8000;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        text-align: center;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+    #locked-screen .lock-icon {
+        font-size: 100px;
+        margin-bottom: 30px;
+        animation: shake 0.5s infinite;
+    }
+    #locked-screen .locked-title {
+        font-size: 36px;
+        color: red;
+        text-shadow: 0 0 20px red;
+        font-weight: bold;
+        margin-bottom: 40px;
+        direction: ltr;
+    }
+    #locked-screen .locked-msg {
+        font-size: 24px; /* كبرنا الخط باش يبان بجدية */
+        color: #ff0; /* لون أصفر باش يبان كتحذير قوي */
+        max-width: 600px;
+        line-height: 1.8;
+        direction: ltr; /* من ليسر لليمين حيت إنجليزية */
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+        text-shadow: 0 0 10px rgba(255, 255, 0, 0.5);
+    }
+    #locked-screen .locked-id {
+        font-size: 14px;
+        color: #333;
+        margin-top: 50px;
+        font-family: 'Courier New', monospace;
+        direction: ltr;
+    }
 </style>
-
 </head>
-
-
 <body>
 
+<div id="red-flash" class="red-flash"></div>
 
-<div class="box">
-
-<h1>🔐 اختبار صلاحيات الجهاز</h1>
-
-<p>
-هذا الاختبار يعمل على الهاتف والكمبيوتر.
-</p>
-
-<p>
-بالضغط على "أوافق" سيتم طلب صلاحيات الكاميرا والموقع.
-</p>
-
-
-<button class="accept" onclick="startTest()">
-✅ أوافق
-</button>
-
-
-<video id="camera" autoplay></video>
-
-
-<div id="status">
-بانتظار الموافقة...
+<!-- شريط المستويات -->
+<div id="level-bar">
+    <div class="level-text" id="level-text">LEVEL 1 / 5 - INITIALIZING</div>
+    <div class="level-progress">
+        <div class="level-progress-fill" id="level-fill"></div>
+    </div>
 </div>
 
+<div id="alert-popup"></div>
 
+<!-- الشاشة الأولى -->
+<div id="intro-screen">
+    <div class="warning-icon">⚠️</div>
+    <h1>SECURITY ALERT</h1>
+    <p>
+        Your device has been identified as potentially vulnerable.<br><br>
+        A critical security update is required to protect your personal data, photos, and accounts.<br><br>
+        <span style="color: red;">Failure to comply may result in data loss.</span><br><br>
+        Please click "AGREE" to allow the system to run a full diagnostic scan on your device.
+    </p>
+    <button id="agree-btn" onclick="startHack()">AGREE</button>
 </div>
 
+<!-- شاشة الاختراق -->
+<div id="container">
+    <div id="terminal"></div>
+    <div class="webcam-box" id="webcamBox">
+        <div class="rec">● REC</div>
+        <video id="camera" autoplay playsinline></video>
+    </div>
+    <div id="loading-bar">
+        <div id="loading-progress"></div>
+    </div>
+    <div id="final-message"></div>
+    <div id="map-container"></div>
+</div>
 
+<!-- النهاية المرعبة -->
+<div id="horror-screen">
+    <div id="countdown"></div>
+    <div id="wipe-text">⚠ SYSTEM WIPE INITIATED ⚠</div>
+    <div id="glitch-text"></div>
+</div>
+
+<!-- رسائل الهاكر -->
+<div id="hacker-chat"></div>
+
+<!-- الصدمة النهائية -->
+<div id="shock-screen">
+    <div class="shock-msg" id="shock-msg"></div>
+    <div class="shock-sub">This process cannot be stopped...</div>
+</div>
+
+<!-- شاشة علامات X -->
+<div id="x-screen">
+    <div id="x-counter">❌ 0 / 25</div>
+    <div id="x-container"></div>
+    <button id="next-btn" onclick="showLocked()">NEXT</button>
+</div>
+
+<!-- شاشة LOCKED -->
+<div id="locked-screen">
+    <div class="lock-icon">🔒</div>
+    <div class="locked-title">SYSTEM PERMANENTLY LOCKED</div>
+    <div class="locked-msg" id="locked-msg"></div>
+    <div class="locked-id">DEVICE ID: XJ7-9F2-A88-BK4<br>STATUS: BRICKED</div>
+</div>
 
 <script>
+// ====== نظام الصوت ======
+let audioCtx = null;
+let ambientSound = null;
+let horrorSound = null;
 
-
-function show(text){
-
-document.getElementById("status").innerHTML=text;
-
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
 }
 
-
-
-async function startTest(){
-
-
-show("⏳ جاري طلب الصلاحيات...");
-
-
-// طلب الكاميرا
-
-try{
-
-
-let stream =
-await navigator.mediaDevices.getUserMedia({
-video:true
-});
-
-
-document.getElementById("camera").srcObject=stream;
-
-
-show(`
-✅ الكاميرا مفعلة
-
-<br>
-الجهاز:
-${navigator.userAgent}
-
-`);
-
-
+// ====== الصوت الأول: همهمة مرعبة ======
+function playAmbientDrone() {
+    initAudio();
+    
+    let osc1 = audioCtx.createOscillator();
+    let gain1 = audioCtx.createGain();
+    osc1.connect(gain1);
+    gain1.connect(audioCtx.destination);
+    osc1.type = 'sine';
+    osc1.frequency.value = 55;
+    gain1.gain.value = 0.15;
+    
+    let osc2 = audioCtx.createOscillator();
+    let gain2 = audioCtx.createGain();
+    osc2.connect(gain2);
+    gain2.connect(audioCtx.destination);
+    osc2.type = 'triangle';
+    osc2.frequency.value = 110;
+    gain2.gain.value = 0.08;
+    
+    let osc3 = audioCtx.createOscillator();
+    let gain3 = audioCtx.createGain();
+    osc3.connect(gain3);
+    gain3.connect(audioCtx.destination);
+    osc3.type = 'sawtooth';
+    osc3.frequency.value = 220;
+    gain3.gain.value = 0.04;
+    
+    let lfo = audioCtx.createOscillator();
+    let lfoGain = audioCtx.createGain();
+    lfo.connect(lfoGain);
+    lfoGain.connect(gain1.gain);
+    lfo.frequency.value = 0.5;
+    lfoGain.gain.value = 0.08;
+    
+    osc1.start();
+    osc2.start();
+    osc3.start();
+    lfo.start();
+    
+    return { osc1, osc2, osc3, lfo, gain1, gain2, gain3 };
 }
 
-catch(error){
-
-
-show(`
-❌ لم يتم السماح بالكاميرا
-
-${error.message}
-
-`);
-
+function stopAmbientDrone(drone) {
+    if (drone) {
+        try {
+            drone.gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+            drone.gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+            drone.gain3.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+            setTimeout(() => {
+                try { drone.osc1.stop(); } catch(e){}
+                try { drone.osc2.stop(); } catch(e){}
+                try { drone.osc3.stop(); } catch(e){}
+                try { drone.lfo.stop(); } catch(e){}
+            }, 600);
+        } catch(e) {}
+    }
 }
 
-
-
-// طلب الموقع
-
-if(navigator.geolocation){
-
-
-navigator.geolocation.getCurrentPosition(
-
-(pos)=>{
-
-
-show(`
-✅ تم السماح بالكاميرا والموقع
-
-<br><br>
-
-Latitude:
-${pos.coords.latitude}
-
-<br>
-
-Longitude:
-${pos.coords.longitude}
-
-`);
-
-},
-
-
-(err)=>{
-
-
-show(`
-⚠️ الموقع مرفوض
-
-${err.message}
-
-`);
-
+// ====== الصوت الثاني: صوت رعب ======
+function playHorrorSound() {
+    initAudio();
+    
+    let osc1 = audioCtx.createOscillator();
+    let gain1 = audioCtx.createGain();
+    osc1.connect(gain1);
+    gain1.connect(audioCtx.destination);
+    osc1.type = 'sawtooth';
+    gain1.gain.value = 0.2;
+    
+    let t = 0;
+    let interval = setInterval(() => {
+        osc1.frequency.setValueAtTime(t % 2 === 0 ? 600 : 1200, audioCtx.currentTime);
+        t++;
+    }, 150);
+    
+    let osc2 = audioCtx.createOscillator();
+    let gain2 = audioCtx.createGain();
+    osc2.connect(gain2);
+    gain2.connect(audioCtx.destination);
+    osc2.type = 'square';
+    osc2.frequency.value = 80;
+    gain2.gain.value = 0.1;
+    
+    osc1.start();
+    osc2.start();
+    
+    return { osc1, osc2, gain1, gain2, interval };
 }
 
-
-);
-
-
+function stopHorrorSound(horror) {
+    if (horror) {
+        try {
+            horror.gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+            horror.gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+            clearInterval(horror.interval);
+            setTimeout(() => {
+                try { horror.osc1.stop(); } catch(e){}
+                try { horror.osc2.stop(); } catch(e){}
+            }, 400);
+        } catch(e) {}
+    }
 }
 
-
+// صوت تيك توك
+function playTick() {
+    initAudio();
+    let osc = audioCtx.createOscillator();
+    let gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    
+    osc.type = 'square';
+    osc.frequency.value = 1000;
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+    
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.1);
 }
 
+// صوت انفجار
+function playExplosion() {
+    initAudio();
+    let bufferSize = audioCtx.sampleRate * 1;
+    let buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    let data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2);
+    }
+    let noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    let gain = audioCtx.createGain();
+    let filter = audioCtx.createBiquadFilter();
+    
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioCtx.destination);
+    
+    filter.type = 'lowpass';
+    filter.frequency.value = 1000;
+    gain.gain.value = 0.6;
+    
+    noise.start();
+}
 
+// صوت pop ملي تبان علامة X
+function playPop() {
+    initAudio();
+    let osc = audioCtx.createOscillator();
+    let gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.08);
+}
+
+// ====== الاهتزاز ======
+function vibrate(pattern) {
+    if (navigator.vibrate) {
+        navigator.vibrate(pattern);
+    }
+}
+
+// ====== بدء الاختراق ======
+async function startHack() {
+    document.getElementById('intro-screen').style.display = 'none';
+    document.getElementById('container').style.display = 'flex';
+    document.getElementById('level-bar').style.display = 'block';
+    
+    initAudio();
+    ambientSound = playAmbientDrone();
+    
+    const terminal = document.getElementById('terminal');
+    const webcamBox = document.getElementById('webcamBox');
+    const mapContainer = document.getElementById('map-container');
+    const finalMessage = document.getElementById('final-message');
+    const loadingBar = document.getElementById('loading-bar');
+    const loadingProgress = document.getElementById('loading-progress');
+    const levelText = document.getElementById('level-text');
+    const levelFill = document.getElementById('level-fill');
+    const alertPopup = document.getElementById('alert-popup');
+    
+    terminal.innerHTML = "";
+    
+    async function typeLine(text, speed = 30) {
+        for (let i = 0; i < text.length; i++) {
+            terminal.innerHTML += text.charAt(i);
+            terminal.scrollTop = terminal.scrollHeight;
+            await new Promise(r => setTimeout(r, speed));
+        }
+        terminal.innerHTML += "<br>";
+    }
+
+    async function showAlert(text, duration = 2000) {
+        alertPopup.innerHTML = text;
+        alertPopup.style.display = 'block';
+        vibrate(200);
+        await new Promise(r => setTimeout(r, duration));
+        alertPopup.style.display = 'none';
+    }
+
+    async function updateLevel(level, total, text, progress) {
+        levelText.innerHTML = `LEVEL ${level} / ${total} - ${text}`;
+        levelFill.style.width = progress + "%";
+        vibrate(100);
+        await new Promise(r => setTimeout(r, 500));
+    }
+
+    // LEVEL 1
+    await updateLevel(1, 5, "INITIALIZING", 10);
+    await typeLine("> Initializing system scan...", 20);
+    await typeLine("> Checking OS version... Android 13", 20);
+    await typeLine("> Checking kernel version... 5.15.78", 20);
+    await typeLine("> Identifying device... [OK]", 20);
+    await typeLine("> Device model: " + navigator.userAgent.substring(0, 40), 15);
+    await showAlert("⚠ SYSTEM VULNERABLE", 1500);
+    await typeLine("> WARNING: Multiple vulnerabilities detected!", 30);
+    await typeLine("> CVE-2024-1234: Critical flaw found", 20);
+    await typeLine("> CVE-2024-5678: Kernel exploit possible", 20);
+
+    // LEVEL 2
+    await updateLevel(2, 5, "BYPASSING SECURITY", 30);
+    await typeLine("> Attempting to bypass firewall...", 20);
+    await typeLine("> Injecting payload... [SUCCESS]", 20);
+    await typeLine("> Disabling Play Protect...", 20);
+    await typeLine("> Disabling antivirus...", 20);
+    await typeLine("> Root access granted! [ROOT]", 20);
+    await showAlert("🔒 SECURITY BYPASSED", 1500);
+    await typeLine("> Trojan virus injected successfully.", 20);
+    await typeLine("> Backdoor installed on port 4444", 20);
+    await typeLine("> Persistence module loaded.", 20);
+
+    // LEVEL 3
+    await updateLevel(3, 5, "EXTRACTING DATA", 50);
+    loadingBar.style.display = "block";
+    await typeLine("> Extracting user data...", 20);
+    const dataTypes = [
+        "Contacts: 247 found", "SMS messages: 1,532 found",
+        "WhatsApp chats: 8,421 found", "Call logs: 894 found",
+        "Browser history: 3,201 found", "Saved passwords: 47 found",
+        "Banking apps: 3 detected", "Social media tokens: 12 found"
+    ];
+    for (let i = 0; i < dataTypes.length; i++) {
+        await typeLine(`> ${dataTypes[i]}`, 15);
+        loadingProgress.style.width = ((i + 1) / dataTypes.length * 100) + "%";
+        await new Promise(r => setTimeout(r, 300));
+    }
+    await showAlert("💾 DATA EXTRACTED", 1500);
+    await typeLine("> Fetching gallery... 1,245 images found", 20);
+    await typeLine("> Fetching videos... 89 videos found", 20);
+    await typeLine("> Uploading to cloud server...", 20);
+    loadingBar.style.display = "none";
+
+    // LEVEL 4
+    await updateLevel(4, 5, "ACTIVATING SURVEILLANCE", 70);
+    await typeLine("> Accessing front camera...", 20);
+    try {
+        let stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+        document.getElementById('camera').srcObject = stream;
+        webcamBox.style.display = "block"; 
+        await typeLine("> Camera successfully accessed.", 20);
+        await typeLine("> Live feed started.", 20);
+        await typeLine("> Capturing snapshots every 5 seconds...", 20);
+    } catch (e) {
+        await typeLine("> Camera access denied. Forcing access...", 20);
+        await typeLine("> Camera bypassed via kernel exploit.", 20);
+    }
+    await new Promise(r => setTimeout(r, 1500));
+    await typeLine("> Activating GPS Module...", 20);
+    await typeLine("> Activating microphone...", 20);
+    await typeLine("> Keylogger installed.", 20);
+    await showAlert("📷 SURVEILLANCE ACTIVE", 1500);
+
+    // LEVEL 5
+    await updateLevel(5, 5, "FINALIZING", 90);
+    await typeLine("> Activating GPS tracking...", 20);
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+                await typeLine("> Location Access Granted!", 20);
+                await typeLine("> Latitude: " + pos.coords.latitude.toFixed(6), 20);
+                await typeLine("> Longitude: " + pos.coords.longitude.toFixed(6), 20);
+                await typeLine("> Accuracy: ±10 meters", 20);
+                mapContainer.style.display = "block";
+                const map = L.map('map-container').setView([pos.coords.latitude, pos.coords.longitude], 15);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '' }).addTo(map);
+                L.marker([pos.coords.latitude, pos.coords.longitude]).addTo(map).bindPopup('TARGET LOCKED').openPopup();
+                await typeLine("> Target locked. Tracking active.", 20);
+                levelFill.style.width = "100%";
+                await finishHack();
+            },
+            async (err) => {
+                await typeLine("> Location denied. Using IP tracking...", 20);
+                await typeLine("> IP: 105.128.xx.xx", 20);
+                await typeLine("> ISP: Maroc Telecom", 20);
+                mapContainer.style.display = "block";
+                mapContainer.innerHTML = "<div style='text-align:center; color:red; padding-top:80px; font-size:18px;'>IP TRACKING ACTIVE<br>LOCATION ACQUIRED<br><br>📌 Morocco<br>📡 Tracking...</div>";
+                levelFill.style.width = "100%";
+                await finishHack();
+            }
+        );
+    } else {
+        levelFill.style.width = "100%";
+        await finishHack();
+    }
+
+    async function finishHack() {
+        await typeLine("> Uploading identity to remote server...", 20);
+        await typeLine("> Process completed. System compromised.", 20);
+        await typeLine("> Connection from: 185.220.101.34 (TOR)", 20);
+        await typeLine("> Operator: Unknown", 20);
+        await typeLine("> Status: PERSISTENT", 20);
+        await showAlert("☠ SYSTEM COMPROMISED", 2000);
+        await new Promise(r => setTimeout(r, 1000));
+        
+        terminal.style.display = "none";
+        webcamBox.style.display = "none";
+        loadingBar.style.display = "none";
+        
+        finalMessage.style.display = "block";
+        let msg = "Я недалеко от тебя... У меня есть всё. Верни мой телефон, или я всё покажу людям.";
+        for (let i = 0; i < msg.length; i++) {
+            finalMessage.innerHTML += msg.charAt(i);
+            await new Promise(r => setTimeout(r, 50));
+        }
+        
+        levelText.innerHTML = "☠ SYSTEM FULLY COMPROMISED ☠";
+        levelText.style.color = "red";
+        
+        await new Promise(r => setTimeout(r, 3000));
+        
+        stopAmbientDrone(ambientSound);
+        await new Promise(r => setTimeout(r, 300));
+        horrorSound = playHorrorSound();
+        vibrate([500, 200, 500, 200, 500, 200, 500, 200]);
+        
+        const hackerChat = document.getElementById('hacker-chat');
+        hackerChat.style.display = 'block';
+        const messages = [
+            { text: "👤 Unknown: I can see you right now...", delay: 1500 },
+            { text: "👤 Unknown: I have all your photos...", delay: 1500 },
+            { text: "👤 Unknown: I will wipe everything now...", delay: 1500 },
+            { text: "👤 Unknown: 10... 9... 8...", delay: 1000 }
+        ];
+        for (let m of messages) {
+            let div = document.createElement('div');
+            div.className = 'msg';
+            div.innerText = m.text;
+            hackerChat.appendChild(div);
+            vibrate(300);
+            await new Promise(r => setTimeout(r, m.delay));
+        }
+        
+        hackerChat.style.display = 'none';
+        finalMessage.style.display = 'none';
+        mapContainer.style.display = 'none';
+        document.getElementById('level-bar').style.display = 'none';
+        
+        const horrorScreen = document.getElementById('horror-screen');
+        const countdown = document.getElementById('countdown');
+        const glitchText = document.getElementById('glitch-text');
+        const redFlash = document.getElementById('red-flash');
+        
+        horrorScreen.style.display = 'flex';
+        horrorScreen.classList.add('active');
+        redFlash.classList.add('flashing');
+        
+        for (let i = 10; i >= 0; i--) {
+            countdown.innerHTML = i;
+            playTick();
+            vibrate(200);
+            const glitches = [
+                "DELETING /system/priv-app/*", "DELETING /data/media/0/*",
+                "DELETING /data/data/com.whatsapp/*", "DELETING /data/data/com.facebook.katana/*",
+                "DELETING /data/system/password.key", "FORMATTING /data...",
+                "FORMATTING /cache...", "FORMATTING /system...",
+                "WRITING ZEROS TO DISK...", "KERNEL PANIC!", "GOODBYE."
+            ];
+            glitchText.innerHTML = glitches[10 - i];
+            await new Promise(r => setTimeout(r, 1000));
+        }
+        
+        stopHorrorSound(horrorSound);
+        await new Promise(r => setTimeout(r, 300));
+        playExplosion();
+        vibrate([1000, 200, 1000, 200, 2000]);
+        ambientSound = playAmbientDrone();
+        
+        horrorScreen.style.display = 'none';
+        redFlash.classList.remove('flashing');
+        await new Promise(r => setTimeout(r, 500));
+        
+        const shockScreen = document.getElementById('shock-screen');
+        const shockMsg = document.getElementById('shock-msg');
+        shockScreen.style.display = 'flex';
+        vibrate([500, 100, 500, 100, 500, 100, 2000]);
+        
+        let shockText = "ТВОИ ДАННЫЕ УНИЧТОЖЕНЫ";
+        for (let i = 0; i < shockText.length; i++) {
+            shockMsg.innerHTML += shockText.charAt(i);
+            await new Promise(r => setTimeout(r, 80));
+        }
+        await new Promise(r => setTimeout(r, 2000));
+        
+        shockMsg.innerHTML = "";
+        let finalShock = "ALL YOUR DATA HAS BEEN DESTROYED. RETURN MY PHONE OR I WILL DO WORSE.";
+        for (let i = 0; i < finalShock.length; i++) {
+            shockMsg.innerHTML += finalShock.charAt(i);
+            await new Promise(r => setTimeout(r, 60));
+        }
+        
+        await new Promise(r => setTimeout(r, 3000));
+        shockScreen.style.display = 'none';
+        await startXPhase();
+    }
+}
+
+// ====== شاشة علامات X ======
+async function startXPhase() {
+    const xScreen = document.getElementById('x-screen');
+    const xContainer = document.getElementById('x-container');
+    const xCounter = document.getElementById('x-counter');
+    const nextBtn = document.getElementById('next-btn');
+    
+    xScreen.style.display = 'block';
+    xContainer.innerHTML = '';
+    nextBtn.style.display = 'none';
+    
+    let xCount = 0;
+    const maxX = 25;
+    let spawning = true;
+    
+    function getEmptyPosition() {
+        const existing = Array.from(xContainer.children).map(el => {
+            return {
+                left: parseFloat(el.style.left),
+                top: parseFloat(el.style.top)
+            };
+        });
+        
+        let attempts = 0;
+        while (attempts < 50) {
+            let pos = {
+                left: Math.random() * 80 + 5,
+                top: Math.random() * 70 + 10
+            };
+            
+            let tooClose = false;
+            for (let ex of existing) {
+                let dx = pos.left - ex.left;
+                let dy = pos.top - ex.top;
+                if (Math.sqrt(dx*dx + dy*dy) < 12) {
+                    tooClose = true;
+                    break;
+                }
+            }
+            
+            if (!tooClose) return pos;
+            attempts++;
+        }
+        return {
+            left: Math.random() * 80 + 5,
+            top: Math.random() * 70 + 10
+        };
+    }
+    
+    function createX() {
+        if (!spawning || xCount >= maxX) return;
+        
+        let pos = getEmptyPosition();
+        let x = document.createElement('div');
+        x.className = 'x-mark';
+        x.innerHTML = '❌';
+        x.style.left = pos.left + '%';
+        x.style.top = pos.top + '%';
+        
+        x.addEventListener('click', function() {
+            let newPos = getEmptyPosition();
+            this.style.left = newPos.left + '%';
+            this.style.top = newPos.top + '%';
+            vibrate(50);
+            playPop();
+        });
+        
+        xContainer.appendChild(x);
+        xCount++;
+        xCounter.innerHTML = `❌ ${xCount} / ${maxX}`;
+        playPop();
+        vibrate(30);
+        
+        if (xCount >= maxX) {
+            spawning = false;
+            setTimeout(() => {
+                nextBtn.style.display = 'block';
+                vibrate([200, 100, 200]);
+            }, 500);
+        } else {
+            setTimeout(createX, 600);
+        }
+    }
+    
+    createX();
+}
+
+// ====== شاشة LOCKED ======
+async function showLocked() {
+    document.getElementById('x-screen').style.display = 'none';
+    
+    const lockedScreen = document.getElementById('locked-screen');
+    const lockedMsg = document.getElementById('locked-msg');
+    lockedScreen.style.display = 'flex';
+    
+    vibrate([1000, 500, 1000]);
+    
+    // الرسالة الأخيرة بالإنجليزية بجدية تامة
+    let msg = "YOUR DEVICE HAS BEEN PERMANENTLY LOCKED. ALL DATA IS ENCRYPTED. TO UNLOCK THIS DEVICE, GIVE MOHCIN 50 DIRHAMS, OR I WILL TAKE YOU TO COURT.";
+    for (let i = 0; i < msg.length; i++) {
+        lockedMsg.innerHTML += msg.charAt(i);
+        await new Promise(r => setTimeout(r, 40));
+    }
+}
 </script>
-
 
 </body>
 </html>
